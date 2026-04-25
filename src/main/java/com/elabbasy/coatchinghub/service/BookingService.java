@@ -346,6 +346,7 @@ public class BookingService {
         List<PortalBookingListResponse> response = page.getContent()
                 .stream()
                 .peek(booking -> booking.setBookingStatus(resolvePortalBookingStatus(
+                        booking.getPaymentStatus(),
                         booking.getStartTime(),
                         booking.getEndTime(),
                         now
@@ -681,10 +682,15 @@ public class BookingService {
     }
 
     private String resolvePortalBookingStatus(
+            PaymentStatus paymentStatus,
             OffsetDateTime start,
             OffsetDateTime end,
             OffsetDateTime now
     ) {
+        if (PaymentStatus.CANCELLED.equals(paymentStatus) || PaymentStatus.REFUNDED.equals(paymentStatus)) {
+            return "CANCELED";
+        }
+
         if (now.isBefore(start)) {
             return "UPCOMING";
         } else if (!now.isBefore(end)) {
