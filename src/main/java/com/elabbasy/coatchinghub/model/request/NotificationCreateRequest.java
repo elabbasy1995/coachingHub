@@ -13,8 +13,10 @@ public class NotificationCreateRequest {
     private Long coachId;
     private Long coacheeId;
 
-    private String title;
-    private String message;
+    private String titleEn;
+    private String titleAr;
+    private String messageEn;
+    private String messageAr;
 
     private NotificationType notificationType;
 

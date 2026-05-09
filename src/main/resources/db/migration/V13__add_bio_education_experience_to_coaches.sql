@@ -1,0 +1,4 @@
+ALTER TABLE coaches
+    ADD COLUMN bio VARCHAR(255),
+    ADD COLUMN education VARCHAR(255),
+    ADD COLUMN experience VARCHAR(255);

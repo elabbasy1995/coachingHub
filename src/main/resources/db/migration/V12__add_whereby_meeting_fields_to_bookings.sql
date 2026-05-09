@@ -1,0 +1,7 @@
+ALTER TABLE bookings
+    ADD COLUMN IF NOT EXISTS meeting_provider VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS meeting_id VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS meeting_room_url TEXT,
+    ADD COLUMN IF NOT EXISTS meeting_host_room_url TEXT,
+    ADD COLUMN IF NOT EXISTS meeting_created_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS meeting_deleted_at TIMESTAMP WITH TIME ZONE;

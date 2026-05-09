@@ -1,5 +1,6 @@
 package com.elabbasy.coatchinghub.model.entity;
 
+import com.elabbasy.coatchinghub.model.enums.MeetingProvider;
 import com.elabbasy.coatchinghub.model.enums.PaymentStatus;
 import com.elabbasy.coatchinghub.model.enums.SlotType;
 import jakarta.persistence.*;
@@ -51,6 +52,9 @@ public class Booking extends AuditBaseEntity {
     @Column(name = "final_price")
     private Double finalPrice;
 
+    @Embedded
+    private BookingFormAnswers formAnswers;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
@@ -58,4 +62,18 @@ public class Booking extends AuditBaseEntity {
     private OffsetDateTime paymentDateTime;
     @Column(name = "payment_transaction", length = 100)
     private String paymentTransaction;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "meeting_provider", length = 50)
+    private MeetingProvider meetingProvider;
+    @Column(name = "meeting_id", length = 100)
+    private String meetingId;
+    @Column(name = "meeting_room_url", length = 1000)
+    private String meetingRoomUrl;
+    @Column(name = "meeting_host_room_url", length = 1000)
+    private String meetingHostRoomUrl;
+    @Column(name = "meeting_created_at")
+    private OffsetDateTime meetingCreatedAt;
+    @Column(name = "meeting_deleted_at")
+    private OffsetDateTime meetingDeletedAt;
 }

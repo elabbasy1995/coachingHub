@@ -43,6 +43,9 @@ public class CreateCoachStep1 {
     private Boolean availableEveryWeek;
     @NotNull(message = "JOB_TITLE_REQUIRED")
     private String jobTitle;
+    private String bio;
+    private String education;
+    private String experience;
     @NotNull(message = "COACHING_INDUSTRIES_REQUIRED")
     private List<Long> coachingIndustriesIds;
     @NotBlank(message = "USERNAME_REQUIRED")

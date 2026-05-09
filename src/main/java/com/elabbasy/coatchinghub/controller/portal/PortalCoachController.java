@@ -3,6 +3,7 @@ package com.elabbasy.coatchinghub.controller.portal;
 import com.elabbasy.coatchinghub.constant.PortalPermissionExpressions;
 import com.elabbasy.coatchinghub.model.dto.CoachDto;
 import com.elabbasy.coatchinghub.model.request.ApproveCoachRequest;
+import com.elabbasy.coatchinghub.model.request.CreatePortalCoachRequest;
 import com.elabbasy.coatchinghub.model.request.UpdatePortalCoachRequest;
 import com.elabbasy.coatchinghub.model.response.ApiResponse;
 import com.elabbasy.coatchinghub.model.response.PortalCoachDetailsResponse;
@@ -21,6 +22,12 @@ import java.util.List;
 public class PortalCoachController {
 
     private final CoachService coachService;
+
+    @PostMapping
+    @PreAuthorize(PortalPermissionExpressions.COACHES)
+    public ApiResponse<PortalCoachDetailsResponse> createCoachForAdmin(@RequestBody @jakarta.validation.Valid CreatePortalCoachRequest request) {
+        return new ApiResponse<>(coachService.createCoachForAdmin(request));
+    }
 
     @PutMapping("/approve/{coachId}")
     @PreAuthorize(PortalPermissionExpressions.COACHES)

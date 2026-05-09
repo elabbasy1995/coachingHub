@@ -1,7 +1,7 @@
 package com.elabbasy.coatchinghub.model.dto;
 
+import com.elabbasy.coatchinghub.model.enums.MeetingProvider;
 import com.elabbasy.coatchinghub.model.enums.PaymentStatus;
-import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,7 +24,14 @@ public class BookingDto extends AuditBaseDto {
     private Double price;
     private Double discount;
     private Double finalPrice;
+    private BookingFormAnswersDto formAnswers;
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
     private OffsetDateTime paymentDateTime;
     private String paymentTransaction;
+    private MeetingProvider meetingProvider;
+    private String meetingId;
+    private String meetingRoomUrl;
+    private String meetingHostRoomUrl;
+    private OffsetDateTime meetingCreatedAt;
+    private OffsetDateTime meetingDeletedAt;
 }

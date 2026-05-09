@@ -14,7 +14,10 @@ import com.elabbasy.coatchinghub.model.entity.Language;
 import com.elabbasy.coatchinghub.model.entity.Nationality;
 import com.elabbasy.coatchinghub.model.enums.PortalAdminPermission;
 import com.elabbasy.coatchinghub.model.response.PortalAdminPermissionResponse;
+import com.elabbasy.coatchinghub.model.response.PortalPersonLookupResponse;
+import com.elabbasy.coatchinghub.repository.CoacheeRepository;
 import com.elabbasy.coatchinghub.repository.CoachingIndustryRepository;
+import com.elabbasy.coatchinghub.repository.CoachRepository;
 import com.elabbasy.coatchinghub.repository.CountryRepository;
 import com.elabbasy.coatchinghub.repository.LanguageRepository;
 import com.elabbasy.coatchinghub.repository.NationalityRepository;
@@ -35,6 +38,8 @@ public class LookupService {
     private final CountryRepository countryRepository;
     private final NationalityMapper nationalityMapper;
     private final NationalityRepository nationalityRepository;
+    private final CoachRepository coachRepository;
+    private final CoacheeRepository coacheeRepository;
 
 
     public List<CountryDto> getCountryLookup() {
@@ -69,5 +74,13 @@ public class LookupService {
                         permission.getNameAr()
                 ))
                 .toList();
+    }
+
+    public List<PortalPersonLookupResponse> getPortalCoachesLookup() {
+        return coachRepository.findPortalCoachLookup();
+    }
+
+    public List<PortalPersonLookupResponse> getPortalCoacheesLookup() {
+        return coacheeRepository.findPortalCoacheeLookup();
     }
 }

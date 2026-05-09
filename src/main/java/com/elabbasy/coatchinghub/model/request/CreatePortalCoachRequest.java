@@ -1,6 +1,7 @@
 package com.elabbasy.coatchinghub.model.request;
 
 import com.elabbasy.coatchinghub.model.enums.Gender;
+import com.elabbasy.coatchinghub.model.enums.Language;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -18,7 +19,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class UpdatePortalCoachRequest {
+public class CreatePortalCoachRequest {
 
     @NotBlank(message = "FULL_NAME_IS_REQUIRED")
     private String fullNameEn;
@@ -68,6 +69,13 @@ public class UpdatePortalCoachRequest {
     @NotBlank(message = "USERNAME_REQUIRED")
     private String username;
 
+    @NotBlank(message = "PASSWORD_IS_REQUIRED")
+    private String password;
+
+    private Language language;
+
+    private Boolean enabled;
+
     @NotNull(message = "HALF_HOUR_PRICE_REQUIRED")
     private Double halfHourPrice;
 
@@ -81,6 +89,7 @@ public class UpdatePortalCoachRequest {
     private Double twoHoursPrice;
 
     @Valid
+    @NotNull(message = "PROFILE_IMAGE_REQUIRED")
     private Attachment profileImage;
 
     @Valid
@@ -91,21 +100,10 @@ public class UpdatePortalCoachRequest {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Attachment {
-        private Long id;
-
         @JsonAlias("attachmentName")
         private String name;
 
-        private String fileUrl;
         private String contentType;
         private String content;
-
-        public boolean hasContent() {
-            return content != null && !content.isBlank();
-        }
-
-        public boolean hasFileUrl() {
-            return fileUrl != null && !fileUrl.isBlank();
-        }
     }
 }

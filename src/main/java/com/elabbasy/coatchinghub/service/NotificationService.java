@@ -51,8 +51,10 @@ public class NotificationService {
             notification.setCoachee(coachee);
         }
 
-        notification.setTitle(request.getTitle());
-        notification.setBody(request.getMessage());
+        notification.setTitleEn(request.getTitleEn());
+        notification.setTitleAr(request.getTitleAr());
+        notification.setBodyEn(request.getMessageEn());
+        notification.setBodyAr(request.getMessageAr());
         notification.setNotificationType(request.getNotificationType());
         notification.setReferenceId(request.getReferenceId());
 
@@ -69,11 +71,25 @@ public class NotificationService {
                             NotificationType type,
                             Long referenceId) {
 
+        notifyCoach(coachId, title, title, message, message, type, referenceId);
+    }
+
+    @Transactional
+    public void notifyCoach(Long coachId,
+                            String titleEn,
+                            String titleAr,
+                            String messageEn,
+                            String messageAr,
+                            NotificationType type,
+                            Long referenceId) {
+
         createNotification(
                 NotificationCreateRequest.builder()
                         .coachId(coachId)
-                        .title(title)
-                        .message(message)
+                        .titleEn(titleEn)
+                        .titleAr(titleAr)
+                        .messageEn(messageEn)
+                        .messageAr(messageAr)
                         .notificationType(type)
                         .referenceId(referenceId)
                         .build()
@@ -87,11 +103,25 @@ public class NotificationService {
                               NotificationType type,
                               Long referenceId) {
 
+        notifyCoachee(coacheeId, title, title, message, message, type, referenceId);
+    }
+
+    @Transactional
+    public void notifyCoachee(Long coacheeId,
+                              String titleEn,
+                              String titleAr,
+                              String messageEn,
+                              String messageAr,
+                              NotificationType type,
+                              Long referenceId) {
+
         createNotification(
                 NotificationCreateRequest.builder()
                         .coacheeId(coacheeId)
-                        .title(title)
-                        .message(message)
+                        .titleEn(titleEn)
+                        .titleAr(titleAr)
+                        .messageEn(messageEn)
+                        .messageAr(messageAr)
                         .notificationType(type)
                         .referenceId(referenceId)
                         .build()
@@ -106,11 +136,26 @@ public class NotificationService {
                            NotificationType type,
                            Long referenceId) {
 
+        notifyBoth(coachId, coacheeId, title, title, message, message, type, referenceId);
+    }
+
+    @Transactional
+    public void notifyBoth(Long coachId,
+                           Long coacheeId,
+                           String titleEn,
+                           String titleAr,
+                           String messageEn,
+                           String messageAr,
+                           NotificationType type,
+                           Long referenceId) {
+
         createNotification(
                 NotificationCreateRequest.builder()
                         .coachId(coachId)
-                        .title(title)
-                        .message(message)
+                        .titleEn(titleEn)
+                        .titleAr(titleAr)
+                        .messageEn(messageEn)
+                        .messageAr(messageAr)
                         .notificationType(type)
                         .referenceId(referenceId)
                         .build()
@@ -118,8 +163,10 @@ public class NotificationService {
         createNotification(
                 NotificationCreateRequest.builder()
                         .coacheeId(coacheeId)
-                        .title(title)
-                        .message(message)
+                        .titleEn(titleEn)
+                        .titleAr(titleAr)
+                        .messageEn(messageEn)
+                        .messageAr(messageAr)
                         .notificationType(type)
                         .referenceId(referenceId)
                         .build()

@@ -42,6 +42,9 @@ public class Coach extends AuditBaseEntity {
     private Integer yearsOfExperience;
     private Boolean availableEveryWeek;
     private String jobTitle;
+    private String bio;
+    private String education;
+    private String experience;
 
     private String username;
     private String profileImageUrl;

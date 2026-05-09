@@ -1,5 +1,6 @@
 package com.elabbasy.coatchinghub.model.request;
 
+import com.elabbasy.coatchinghub.model.dto.BookingFormAnswersDto;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,4 +17,5 @@ public class CreateBookingRequest {
     private Long coachId;
     @NotNull(message = "SLOT_IS_REQUIRED")
     private Long coachSlotId;
+    private BookingFormAnswersDto formAnswers;
 }

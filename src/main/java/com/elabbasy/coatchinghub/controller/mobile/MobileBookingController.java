@@ -68,6 +68,20 @@ public class MobileBookingController {
         return new ApiResponse<>(booking);
     }
 
+    @PreAuthorize("hasRole('COACHEE')")
+    @PutMapping("/{bookingId}/cancel-by-coachee")
+    public ApiResponse<BookingDto> cancelByCoachee(@PathVariable Long bookingId,
+                                                   @RequestAttribute(name = Constants.COACHEE_ID_ATTRIBUTE) Long coacheeId) {
+        return new ApiResponse<>(bookingService.cancelBookingByCoachee(bookingId, coacheeId));
+    }
+
+    @PreAuthorize("hasRole('COACH')")
+    @PutMapping("/{bookingId}/cancel-by-coach")
+    public ApiResponse<BookingDto> cancelByCoach(@PathVariable Long bookingId,
+                                                 @RequestAttribute(name = Constants.COACH_ID_ATTRIBUTE) Long coachId) {
+        return new ApiResponse<>(bookingService.cancelBookingByCoach(bookingId, coachId));
+    }
+
     @PreAuthorize("hasRole('COACH')")
     @Operation(summary = "get all coachee bookings with the coach")
     @GetMapping("/all-coachee-booking-with-coach/{coacheeId}")

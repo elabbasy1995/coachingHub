@@ -21,8 +21,10 @@ import java.time.LocalDateTime;
 @SQLDelete(sql = "UPDATE {h-schema} notifications SET DELETED = true WHERE id = ?")
 public class Notification extends AuditBaseEntity {
 
-    private String title;
-    private String body;
+    private String titleEn;
+    private String titleAr;
+    private String bodyEn;
+    private String bodyAr;
 
     @Column(nullable = false)
     private Boolean read = false;

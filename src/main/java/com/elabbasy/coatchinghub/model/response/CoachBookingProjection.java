@@ -1,5 +1,7 @@
 package com.elabbasy.coatchinghub.model.response;
 
+import com.elabbasy.coatchinghub.model.enums.PaymentStatus;
+
 import java.time.OffsetDateTime;
 
 public interface CoachBookingProjection {
@@ -11,6 +13,7 @@ public interface CoachBookingProjection {
     Double getPrice();
     Double getDiscount();
     Double getFinalPrice();
+    PaymentStatus getPaymentStatus();
     String getCoacheeFullName();
     String getCoacheeProfileImageUrl();
 

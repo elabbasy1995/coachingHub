@@ -14,8 +14,10 @@ import java.time.LocalDateTime;
 public class NotificationResponse {
 
     private Long id;
-    private String title;
-    private String body;
+    private String titleEn;
+    private String titleAr;
+    private String bodyEn;
+    private String bodyAr;
     private Boolean read;
     private LocalDateTime createdDate;
 }

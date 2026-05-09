@@ -29,8 +29,8 @@ public interface CoachSlotRepository extends JpaRepository<CoachSlot, Long> {
     @Query("SELECT s FROM CoachSlot s WHERE s.coach.id = :coachId")
     List<CoachSlot> findSlotsByCoach(@Param("coachId") Long coachId);
 
-    @Query("SELECT s FROM CoachSlot s WHERE s.coach.id = :coachId and status = 'AVAILABLE'")
-    List<CoachSlot> findAvailableSlotsByCoach(@Param("coachId") Long coachId);
+    @Query("SELECT s FROM CoachSlot s WHERE s.coach.id = :coachId and s.status = 'AVAILABLE' and s.startTimeUtc >= :startTimeUtc")
+    List<CoachSlot> findAvailableSlotsByCoach(@Param("coachId") Long coachId, @Param("startTimeUtc") OffsetDateTime startTimeUtc);
 
     @Query("""
     SELECT cs

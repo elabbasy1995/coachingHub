@@ -8,6 +8,7 @@ import com.elabbasy.coatchinghub.model.dto.LanguageDto;
 import com.elabbasy.coatchinghub.model.enums.SlotType;
 import com.elabbasy.coatchinghub.model.response.ApiResponse;
 import com.elabbasy.coatchinghub.model.response.PortalAdminPermissionResponse;
+import com.elabbasy.coatchinghub.model.response.PortalPersonLookupResponse;
 import com.elabbasy.coatchinghub.model.response.SlotTypeResponse;
 import com.elabbasy.coatchinghub.service.LookupService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -65,6 +66,18 @@ public class PortalLookupController {
                 .toList();
 
         return new ApiResponse<>(list);
+    }
+
+    @GetMapping("/coaches")
+    @PreAuthorize(PortalPermissionExpressions.COACHES_OR_BOOKING)
+    public ApiResponse<List<PortalPersonLookupResponse>> getCoachesLookup() {
+        return new ApiResponse<>(lookupService.getPortalCoachesLookup());
+    }
+
+    @GetMapping("/coachees")
+    @PreAuthorize(PortalPermissionExpressions.BOOKING)
+    public ApiResponse<List<PortalPersonLookupResponse>> getCoacheesLookup() {
+        return new ApiResponse<>(lookupService.getPortalCoacheesLookup());
     }
 
     @GetMapping("/portal-admin-permissions")

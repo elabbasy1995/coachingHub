@@ -176,7 +176,7 @@ public class CoachSlotService {
     }
 
     public List<DaySlotsDto> getAvailableSlotsByDay(Long coachId) {
-        List<CoachSlot> slots = coachSlotRepository.findAvailableSlotsByCoach(coachId);
+        List<CoachSlot> slots = coachSlotRepository.findAvailableSlotsByCoach(coachId, OffsetDateTime.now());
 
         Map<LocalDate, List<CoachSlotResponse>> grouped = slots.stream()
                 .map(coachSlotMapper::toCoachSlotResponse)

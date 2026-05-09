@@ -77,6 +77,9 @@ public class CoachService {
         coach.setYearsOfExperience(request.getYearsOfExperience());
         coach.setAvailableEveryWeek(request.getAvailableEveryWeek());
         coach.setJobTitle(request.getJobTitle());
+        coach.setBio(request.getBio());
+        coach.setEducation(request.getEducation());
+        coach.setExperience(request.getExperience());
 
         // set coaching industries
         List<CoachingIndustry> industries = industryRepository.findAllById(request.getCoachingIndustriesIds());
@@ -122,6 +125,62 @@ public class CoachService {
         emailOtpService.sendOtpAfterRegistration(user.getEmail());
 
         return coachMapper.toDto(save);
+    }
+
+    public PortalCoachDetailsResponse createCoachForAdmin(CreatePortalCoachRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BusinessException(ErrorMessage.EMAIL_ALREADY_EXIST);
+        }
+
+        Country country = countryRepository.findById(request.getCountryId())
+                .orElseThrow(() -> new BusinessException(ErrorMessage.COUNTRY_REQUIRED));
+        Nationality nationality = nationalityRepository.findById(request.getNationalityId())
+                .orElseThrow(() -> new BusinessException(ErrorMessage.NATIONALITY_REQUIRED));
+        List<Language> languages = languageRepository.findByIdIn(request.getLanguageIds());
+        List<CoachingIndustry> industries = industryRepository.findAllById(request.getCoachingIndustriesIds());
+
+        Coach coach = new Coach();
+        coach.setFullNameEn(request.getFullNameEn());
+        coach.setFullNameAr(request.getFullNameAr());
+        coach.setGender(request.getGender());
+        coach.setBirthDate(request.getBirthDate());
+        coach.setCountry(country);
+        coach.setNationality(nationality);
+        coach.setEmail(request.getEmail());
+        coach.setWhatsAppNumber(request.getWhatsAppNumber());
+        coach.setYearsOfExperience(request.getYearsOfExperience());
+        coach.setLanguages(languages);
+        coach.setAvailableEveryWeek(request.getAvailableEveryWeek());
+        coach.setJobTitle(request.getJobTitle());
+        coach.setBio(request.getBio());
+        coach.setEducation(request.getEducation());
+        coach.setExperience(request.getExperience());
+        coach.setCoachingIndustries(industries);
+        coach.setUsername(request.getUsername());
+        coach.setHalfHourPrice(request.getHalfHourPrice());
+        coach.setHourlyPrice(request.getHourlyPrice());
+        coach.setOneAndHalfHourPrice(request.getOneAndHalfHourPrice());
+        coach.setTwoHoursPrice(request.getTwoHoursPrice());
+        coach.setProfileImageUrl(fileStorageService.saveProfileImage(toCreateAttachment(request.getProfileImage())));
+        coach.setStatus(CoachStatus.APPROVED);
+
+        Coach savedCoach = coachRepository.save(coach);
+        savePortalCoachCertificates(savedCoach, request.getCertificates());
+
+        User user = new User();
+        user.setEmail(savedCoach.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setEnabled(request.getEnabled() == null || request.getEnabled());
+        user.setLanguage(request.getLanguage());
+        Role coachRole = roleRepository.findByName(RoleName.COACH.name())
+                .orElseThrow(() -> new RuntimeException("COACH role not found"));
+        user.getRoles().add(coachRole);
+        userRepository.save(user);
+
+        savedCoach.setUser(user);
+        coachRepository.save(savedCoach);
+
+        return getDetailsForAdmin(savedCoach.getId());
     }
 
     // Admin approves coach request
@@ -227,6 +286,9 @@ public class CoachService {
         coach.setLanguages(languages);
         coach.setAvailableEveryWeek(request.getAvailableEveryWeek());
         coach.setJobTitle(request.getJobTitle());
+        coach.setBio(request.getBio());
+        coach.setEducation(request.getEducation());
+        coach.setExperience(request.getExperience());
         coach.setCoachingIndustries(industries);
         coach.setUsername(request.getUsername());
         coach.setHalfHourPrice(request.getHalfHourPrice());
@@ -266,6 +328,9 @@ public class CoachService {
         response.setYearsOfExperience(coachDto.getYearsOfExperience());
         response.setAvailableEveryWeek(coachDto.getAvailableEveryWeek());
         response.setJobTitle(coachDto.getJobTitle());
+        response.setBio(coachDto.getBio());
+        response.setEducation(coachDto.getEducation());
+        response.setExperience(coachDto.getExperience());
         response.setUsername(coachDto.getUsername());
         response.setProfileImageUrl(coachDto.getProfileImageUrl());
         response.setStatus(coachDto.getStatus());
@@ -382,6 +447,25 @@ public class CoachService {
         return certificate;
     }
 
+    private void savePortalCoachCertificates(Coach coach, List<CreatePortalCoachRequest.Attachment> certificates) {
+        if (certificates == null || certificates.isEmpty()) {
+            return;
+        }
+
+        for (CreatePortalCoachRequest.Attachment attachment : certificates) {
+            CreateCoachStep1.Attachment newAttachment = toCreateAttachment(attachment);
+            String certificateUrl = fileStorageService.saveCertificate(newAttachment);
+
+            Certificate certificate = new Certificate();
+            certificate.setName(newAttachment.getAttachmentName());
+            certificate.setFileUrl(certificateUrl);
+            certificate.setContentType(newAttachment.getContentType());
+            certificate.setCoach(coach);
+
+            certificateRepository.save(certificate);
+        }
+    }
+
     private Certificate resolveExistingCertificateReference(UpdatePortalCoachRequest.Attachment attachment,
                                                             Map<Long, Certificate> existingCertificatesById,
                                                             Map<String, Certificate> existingCertificatesByFileUrl) {
@@ -411,6 +495,30 @@ public class CoachService {
     }
 
     private CreateCoachStep1.Attachment toCreateAttachment(UpdatePortalCoachRequest.Attachment attachment) {
+        if (!hasText(attachment.getContentType())) {
+            throw new BusinessException(ErrorMessage.CONTENT_TYPE_REQUIRED);
+        }
+
+        if (!hasText(attachment.getContent())) {
+            throw new BusinessException(ErrorMessage.CONTENT_REQUIRED);
+        }
+
+        if (!hasText(attachment.getName())) {
+            throw new BusinessException(ErrorMessage.ATTACHMENT_NAME_REQUIRED);
+        }
+
+        return new CreateCoachStep1.Attachment(
+                attachment.getContentType(),
+                attachment.getContent(),
+                attachment.getName()
+        );
+    }
+
+    private CreateCoachStep1.Attachment toCreateAttachment(CreatePortalCoachRequest.Attachment attachment) {
+        if (attachment == null) {
+            throw new BusinessException(ErrorMessage.INVALID_ATTACHMENT_REFERENCE);
+        }
+
         if (!hasText(attachment.getContentType())) {
             throw new BusinessException(ErrorMessage.CONTENT_TYPE_REQUIRED);
         }
