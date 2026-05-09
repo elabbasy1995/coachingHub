@@ -5,6 +5,7 @@ import com.elabbasy.coatchinghub.model.enums.BookingStatus;
 import com.elabbasy.coatchinghub.model.enums.CoachStatus;
 import com.elabbasy.coatchinghub.model.enums.PaymentStatus;
 import com.elabbasy.coatchinghub.model.enums.TaskAssignmentStatus;
+import com.elabbasy.coatchinghub.model.response.PortalBookingReportResponse;
 import com.elabbasy.coatchinghub.model.response.PortalBookingStatusCountsResponse;
 import com.elabbasy.coatchinghub.model.response.PortalCoachBookingDashboardResponse;
 import com.elabbasy.coatchinghub.model.response.PortalDashboardResponse;
@@ -23,6 +24,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -37,22 +39,23 @@ public class PortalDashboardService {
     private final BookingRepository bookingRepository;
     private final TaskAssignmentRepository taskAssignmentRepository;
 
-    public PortalDashboardResponse getDashboard() {
-        OffsetDateTime todayStart = LocalDate.now().atStartOfDay().atOffset(ZoneOffset.UTC);
-        OffsetDateTime tomorrowStart = todayStart.plusDays(1);
-        OffsetDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+    public PortalDashboardResponse getDashboard(LocalDate startDate, LocalDate endDate) {
+        OffsetDateTime startDateTime = startDateTime(startDate);
+        OffsetDateTime endDateTime = endDateTime(endDate);
+        LocalDateTime createdStartDateTime = startDate.atStartOfDay();
+        LocalDateTime createdEndDateTime = endDate.plusDays(1).atStartOfDay();
 
         return new PortalDashboardResponse(
-                buildCoachStats(),
-                buildCoacheeStats(),
-                buildBookingStats(todayStart, tomorrowStart, monthStart),
-                buildRevenueStats(todayStart, tomorrowStart, monthStart)
+                buildCoachStats(createdStartDateTime, createdEndDateTime),
+                buildCoacheeStats(createdStartDateTime, createdEndDateTime),
+                buildBookingStats(startDateTime, endDateTime),
+                buildRevenueStats(startDateTime, endDateTime)
         );
     }
 
     public PortalBookingStatusCountsResponse getBookingStatusCounts(LocalDate startDate, LocalDate endDate) {
-        OffsetDateTime startDateTime = startDate.atStartOfDay().atOffset(ZoneOffset.UTC);
-        OffsetDateTime endDateTime = endDate.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        OffsetDateTime startDateTime = startDateTime(startDate);
+        OffsetDateTime endDateTime = endDateTime(endDate);
         OffsetDateTime now = OffsetDateTime.now();
 
         Long totalCount = bookingRepository.count(dateRangeSpec(startDateTime, endDateTime));
@@ -67,9 +70,26 @@ public class PortalDashboardService {
         return new PortalBookingStatusCountsResponse(startDate, endDate, totalCount, statusCounts);
     }
 
+    public PortalBookingReportResponse getBookingReport(LocalDate startDate, LocalDate endDate) {
+        OffsetDateTime startDateTime = startDateTime(startDate);
+        OffsetDateTime endDateTime = endDateTime(endDate);
+        OffsetDateTime now = OffsetDateTime.now();
+
+        Long totalCount = bookingRepository.countByStartTimeGreaterThanEqualAndStartTimeLessThan(startDateTime, endDateTime);
+        Long completedCount = bookingRepository.count(completedBookingSpec(startDateTime, endDateTime, now));
+
+        return new PortalBookingReportResponse(
+                startDate,
+                endDate,
+                totalCount,
+                completedCount,
+                totalCount - completedCount
+        );
+    }
+
     public PortalRevenueBetweenDatesResponse getRevenueBetweenDates(LocalDate startDate, LocalDate endDate) {
-        OffsetDateTime startDateTime = startDate.atStartOfDay().atOffset(ZoneOffset.UTC);
-        OffsetDateTime endDateTime = endDate.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        OffsetDateTime startDateTime = startDateTime(startDate);
+        OffsetDateTime endDateTime = endDateTime(endDate);
         Double totalRevenue = defaultDouble(
                 bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeBetween(
                         PaymentStatus.PAID,
@@ -109,32 +129,41 @@ public class PortalDashboardService {
         );
     }
 
-    public Page<PortalCoachBookingDashboardResponse> getCoachBookings(Integer pageIndex, Integer pageSize) {
+    public Page<PortalCoachBookingDashboardResponse> getCoachBookings(LocalDate startDate,
+                                                                      LocalDate endDate,
+                                                                      Integer pageIndex,
+                                                                      Integer pageSize) {
         return coachRepository.findCoachBookingDashboard(
                 PaymentStatus.PAID,
                 PaymentStatus.PENDING,
                 PaymentStatus.CANCELLED,
                 OffsetDateTime.now(),
+                startDateTime(startDate),
+                endDateTime(endDate),
                 PageRequest.of(pageIndex == null ? 0 : pageIndex, pageSize == null ? 20 : pageSize)
         );
     }
 
-    public List<PortalIndustryPaidBookingCountResponse> getPaidBookingCountsByIndustry() {
-        return bookingRepository.countPaidBookingsByCoachingIndustry(PaymentStatus.PAID);
-    }
-
-    private PortalDashboardResponse.CoachStats buildCoachStats() {
-        return new PortalDashboardResponse.CoachStats(
-                coachRepository.count(),
-                coachRepository.countByStatus(CoachStatus.APPROVED),
-                coachRepository.countByStatus(CoachStatus.PENDING_APPROVAL),
-                coachRepository.countByStatus(CoachStatus.REJECTED)
+    public List<PortalIndustryPaidBookingCountResponse> getPaidBookingCountsByIndustry(LocalDate startDate, LocalDate endDate) {
+        return bookingRepository.countPaidBookingsByCoachingIndustry(
+                PaymentStatus.PAID,
+                startDateTime(startDate),
+                endDateTime(endDate)
         );
     }
 
-    private PortalDashboardResponse.CoacheeStats buildCoacheeStats() {
-        long total = coacheeRepository.count();
-        long active = coacheeRepository.countByActiveTrue();
+    private PortalDashboardResponse.CoachStats buildCoachStats(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return new PortalDashboardResponse.CoachStats(
+                coachRepository.countByCreatedDateGreaterThanEqualAndCreatedDateLessThan(startDateTime, endDateTime),
+                coachRepository.countByStatusAndCreatedDateGreaterThanEqualAndCreatedDateLessThan(CoachStatus.APPROVED, startDateTime, endDateTime),
+                coachRepository.countByStatusAndCreatedDateGreaterThanEqualAndCreatedDateLessThan(CoachStatus.PENDING_APPROVAL, startDateTime, endDateTime),
+                coachRepository.countByStatusAndCreatedDateGreaterThanEqualAndCreatedDateLessThan(CoachStatus.REJECTED, startDateTime, endDateTime)
+        );
+    }
+
+    private PortalDashboardResponse.CoacheeStats buildCoacheeStats(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        long total = coacheeRepository.countByCreatedDateGreaterThanEqualAndCreatedDateLessThan(startDateTime, endDateTime);
+        long active = coacheeRepository.countByActiveTrueAndCreatedDateGreaterThanEqualAndCreatedDateLessThan(startDateTime, endDateTime);
 
         return new PortalDashboardResponse.CoacheeStats(
                 total,
@@ -143,27 +172,25 @@ public class PortalDashboardService {
         );
     }
 
-    private PortalDashboardResponse.BookingStats buildBookingStats(OffsetDateTime todayStart,
-                                                                   OffsetDateTime tomorrowStart,
-                                                                   OffsetDateTime monthStart) {
+    private PortalDashboardResponse.BookingStats buildBookingStats(OffsetDateTime startDateTime,
+                                                                   OffsetDateTime endDateTime) {
         return new PortalDashboardResponse.BookingStats(
-                bookingRepository.count(),
-                bookingRepository.countByPaymentStatus(PaymentStatus.PAID),
-                bookingRepository.countByPaymentStatus(PaymentStatus.PENDING),
-                bookingRepository.countByPaymentStatus(PaymentStatus.CANCELLED),
-                bookingRepository.countByPaymentStatus(PaymentStatus.REFUNDED),
-                bookingRepository.countByStartTimeGreaterThanEqualAndStartTimeLessThan(todayStart, tomorrowStart),
-                bookingRepository.countByStartTimeGreaterThanEqual(monthStart)
+                bookingRepository.countByStartTimeGreaterThanEqualAndStartTimeLessThan(startDateTime, endDateTime),
+                bookingRepository.countByPaymentStatusAndStartTimeGreaterThanEqualAndStartTimeLessThan(PaymentStatus.PAID, startDateTime, endDateTime),
+                bookingRepository.countByPaymentStatusAndStartTimeGreaterThanEqualAndStartTimeLessThan(PaymentStatus.PENDING, startDateTime, endDateTime),
+                bookingRepository.countByPaymentStatusAndStartTimeGreaterThanEqualAndStartTimeLessThan(PaymentStatus.CANCELLED, startDateTime, endDateTime),
+                bookingRepository.countByPaymentStatusAndStartTimeGreaterThanEqualAndStartTimeLessThan(PaymentStatus.REFUNDED, startDateTime, endDateTime),
+                bookingRepository.countByStartTimeGreaterThanEqualAndStartTimeLessThan(startDateTime, endDateTime),
+                bookingRepository.countByStartTimeGreaterThanEqualAndStartTimeLessThan(startDateTime, endDateTime)
         );
     }
 
-    private PortalDashboardResponse.RevenueStats buildRevenueStats(OffsetDateTime todayStart,
-                                                                   OffsetDateTime tomorrowStart,
-                                                                   OffsetDateTime monthStart) {
+    private PortalDashboardResponse.RevenueStats buildRevenueStats(OffsetDateTime startDateTime,
+                                                                   OffsetDateTime endDateTime) {
         return new PortalDashboardResponse.RevenueStats(
-                defaultDouble(bookingRepository.sumFinalPriceByPaymentStatus(PaymentStatus.PAID)),
-                defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeBetween(PaymentStatus.PAID, todayStart, tomorrowStart)),
-                defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeGreaterThanEqual(PaymentStatus.PAID, monthStart))
+                defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeBetween(PaymentStatus.PAID, startDateTime, endDateTime)),
+                defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeBetween(PaymentStatus.PAID, startDateTime, endDateTime)),
+                defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeBetween(PaymentStatus.PAID, startDateTime, endDateTime))
         );
     }
 
@@ -189,6 +216,14 @@ public class PortalDashboardService {
                 criteriaBuilder.greaterThanOrEqualTo(root.get("startTime"), startDateTime),
                 criteriaBuilder.lessThan(root.get("startTime"), endDateTime)
         );
+    }
+
+    private OffsetDateTime startDateTime(LocalDate startDate) {
+        return startDate.atStartOfDay().atOffset(ZoneOffset.UTC);
+    }
+
+    private OffsetDateTime endDateTime(LocalDate endDate) {
+        return endDate.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
     }
 
     private Specification<Booking> statusSpec(BookingStatus status,
@@ -222,5 +257,17 @@ public class PortalDashboardService {
 
             return criteriaBuilder.and(dateRange, statusPredicate);
         };
+    }
+
+    private Specification<Booking> completedBookingSpec(OffsetDateTime startDateTime,
+                                                        OffsetDateTime endDateTime,
+                                                        OffsetDateTime now) {
+        return (root, query, criteriaBuilder) -> criteriaBuilder.and(
+                criteriaBuilder.greaterThanOrEqualTo(root.get("startTime"), startDateTime),
+                criteriaBuilder.lessThan(root.get("startTime"), endDateTime),
+                criteriaBuilder.notEqual(root.get("paymentStatus"), PaymentStatus.CANCELLED),
+                criteriaBuilder.notEqual(root.get("paymentStatus"), PaymentStatus.PENDING),
+                criteriaBuilder.lessThanOrEqualTo(root.get("startTime"), now)
+        );
     }
 }

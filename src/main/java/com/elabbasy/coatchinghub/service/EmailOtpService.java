@@ -120,6 +120,16 @@ public class EmailOtpService {
         sendEmail(email, subject, body);
     }
 
+    public void sendCoachInvitation(String email,
+                                    String fullName,
+                                    String username,
+                                    String password) {
+        String subject = "Coach account invitation";
+        String body = buildCoachInvitationTemplate(fullName, username, password);
+
+        sendEmail(email, subject, body);
+    }
+
     public void sendOtpUpdateCoacheeEmail(UpdateCoacheeEmailRequest updateCoacheeEmailRequest, Long coacheeId) {
 
         Coachee coachee = coacheeRepository.findById(coacheeId).orElseThrow(() -> new BusinessException(ErrorMessage.COACHEE_NOT_FOUND));
@@ -312,6 +322,42 @@ public class EmailOtpService {
                   </body>
                 </html>
                 """.formatted(fullName, email, password, permissions);
+    }
+
+    private String buildCoachInvitationTemplate(String fullName,
+                                                String username,
+                                                String password) {
+        return """
+                <html>
+                  <body style="margin:0;padding:0;background:#f3f6fa;font-family:Tahoma,Arial,sans-serif;color:#17324d;">
+                    <div style="max-width:680px;margin:0 auto;padding:32px 20px;">
+                      <div style="background:linear-gradient(135deg,#17324d,#1f7a8c);padding:32px;border-radius:22px 22px 0 0;color:#ffffff;">
+                        <div style="font-size:13px;letter-spacing:1.8px;text-transform:uppercase;opacity:.82;">Coaching Hub</div>
+                        <h1 style="margin:14px 0 8px;font-size:30px;line-height:1.2;">Coach Account Invitation</h1>
+                        <p style="margin:0;font-size:15px;line-height:1.8;opacity:.92;">You have been invited to join Coaching Hub as a coach.</p>
+                      </div>
+                      <div style="background:#ffffff;padding:32px;border-radius:0 0 22px 22px;box-shadow:0 18px 50px rgba(23,50,77,.10);">
+                        <p style="margin:0 0 18px;font-size:16px;line-height:1.8;">Hello %s,</p>
+                        <p style="margin:0 0 24px;font-size:15px;line-height:1.8;color:#425b76;">Your coach account has been created successfully. Please use the credentials below to sign in.</p>
+                        <table role="presentation" style="width:100%%;border-collapse:separate;border-spacing:0 12px;">
+                          <tr>
+                            <td style="width:150px;font-weight:700;color:#5b748e;">Username</td>
+                            <td style="background:#f8fbff;border:1px solid #d8e4f0;padding:14px 16px;border-radius:14px;">%s</td>
+                          </tr>
+                          <tr>
+                            <td style="width:150px;font-weight:700;color:#5b748e;">Temporary Password</td>
+                            <td style="background:#fff8f0;border:1px solid #f3dcc0;padding:14px 16px;border-radius:14px;font-weight:700;color:#8a4b08;">%s</td>
+                          </tr>
+                        </table>
+                        <div style="margin-top:24px;padding:18px 20px;background:#eef7f3;border:1px solid #cfe5da;border-radius:16px;color:#285943;">
+                          Please sign in and change your password immediately to keep your account secure.
+                        </div>
+                        <p style="margin:24px 0 0;font-size:14px;line-height:1.8;color:#6b7f95;">If this invitation reached you by mistake, please ignore this email or contact the Coaching Hub support team.</p>
+                      </div>
+                    </div>
+                  </body>
+                </html>
+                """.formatted(fullName, username, password);
     }
 
     private String buildPasswordResetTemplate(String title,

@@ -69,7 +69,7 @@ public class CreatePortalCoachRequest {
     @NotBlank(message = "USERNAME_REQUIRED")
     private String username;
 
-    @NotBlank(message = "PASSWORD_IS_REQUIRED")
+    @Deprecated
     private String password;
 
     private Language language;

@@ -38,6 +38,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
 
     Long countByPaymentStatus(PaymentStatus paymentStatus);
 
+    Long countByPaymentStatusAndStartTimeGreaterThanEqualAndStartTimeLessThan(
+            PaymentStatus paymentStatus,
+            OffsetDateTime startTime,
+            OffsetDateTime endTime
+    );
+
     Long countByStartTimeGreaterThanEqual(OffsetDateTime startTime);
 
     Long countByStartTimeGreaterThanEqualAndStartTimeLessThan(OffsetDateTime startTime, OffsetDateTime endTime);
@@ -84,11 +90,15 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
         JOIN b.coach coach
         JOIN coach.coachingIndustries industry
         WHERE b.paymentStatus = :paymentStatus
+          AND b.startTime >= :startTime
+          AND b.startTime < :endTime
         GROUP BY industry.id, industry.nameEn, industry.nameAr
         ORDER BY COUNT(b) DESC, industry.nameEn ASC
     """)
     java.util.List<PortalIndustryPaidBookingCountResponse> countPaidBookingsByCoachingIndustry(
-            @Param("paymentStatus") PaymentStatus paymentStatus
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("startTime") OffsetDateTime startTime,
+            @Param("endTime") OffsetDateTime endTime
     );
 
     Page<CoacheeCoachBookingProjection> findByCoachIdAndCoacheeIdAndPaymentStatus(Long coachId, Long coacheeId, PaymentStatus paymentStatus, Pageable pageable);

@@ -167,9 +167,11 @@ public class CoachService {
         Coach savedCoach = coachRepository.save(coach);
         savePortalCoachCertificates(savedCoach, request.getCertificates());
 
+        String generatedPassword = PasswordGenerator.generateRandomPassword(12);
+
         User user = new User();
         user.setEmail(savedCoach.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPassword(passwordEncoder.encode(generatedPassword));
         user.setEnabled(request.getEnabled() == null || request.getEnabled());
         user.setLanguage(request.getLanguage());
         Role coachRole = roleRepository.findByName(RoleName.COACH.name())
@@ -179,6 +181,15 @@ public class CoachService {
 
         savedCoach.setUser(user);
         coachRepository.save(savedCoach);
+
+        emailOtpService.sendCoachInvitation(
+                savedCoach.getEmail(),
+                savedCoach.getFullNameEn(),
+                savedCoach.getUsername() != null && !savedCoach.getUsername().isBlank()
+                        ? savedCoach.getUsername()
+                        : savedCoach.getEmail(),
+                generatedPassword
+        );
 
         return getDetailsForAdmin(savedCoach.getId());
     }

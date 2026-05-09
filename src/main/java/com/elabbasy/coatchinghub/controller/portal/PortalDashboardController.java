@@ -2,6 +2,7 @@ package com.elabbasy.coatchinghub.controller.portal;
 
 import com.elabbasy.coatchinghub.constant.PortalPermissionExpressions;
 import com.elabbasy.coatchinghub.model.response.ApiResponse;
+import com.elabbasy.coatchinghub.model.response.PortalBookingReportResponse;
 import com.elabbasy.coatchinghub.model.response.PortalBookingStatusCountsResponse;
 import com.elabbasy.coatchinghub.model.response.PortalCoachBookingDashboardResponse;
 import com.elabbasy.coatchinghub.model.response.PortalDashboardResponse;
@@ -30,8 +31,10 @@ public class PortalDashboardController {
 
     @GetMapping
     @PreAuthorize(PortalPermissionExpressions.DASHBOARD)
-    public ApiResponse<PortalDashboardResponse> getDashboard() {
-        return new ApiResponse<>(portalDashboardService.getDashboard());
+    public ApiResponse<PortalDashboardResponse> getDashboard(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return new ApiResponse<>(portalDashboardService.getDashboard(startDate, endDate));
     }
 
     @GetMapping("/booking-status-counts")
@@ -40,6 +43,14 @@ public class PortalDashboardController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return new ApiResponse<>(portalDashboardService.getBookingStatusCounts(startDate, endDate));
+    }
+
+    @GetMapping("/booking-report")
+    @PreAuthorize(PortalPermissionExpressions.DASHBOARD)
+    public ApiResponse<PortalBookingReportResponse> getBookingReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return new ApiResponse<>(portalDashboardService.getBookingReport(startDate, endDate));
     }
 
     @GetMapping("/revenue")
@@ -64,15 +75,19 @@ public class PortalDashboardController {
     @GetMapping("/coach-bookings")
     @PreAuthorize(PortalPermissionExpressions.DASHBOARD)
     public ApiResponse<List<PortalCoachBookingDashboardResponse>> getCoachBookings(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false, defaultValue = "0") Integer pageIndex,
             @RequestParam(required = false, defaultValue = "20") Integer pageSize) {
-        Page<PortalCoachBookingDashboardResponse> page = portalDashboardService.getCoachBookings(pageIndex, pageSize);
+        Page<PortalCoachBookingDashboardResponse> page = portalDashboardService.getCoachBookings(startDate, endDate, pageIndex, pageSize);
         return new ApiResponse<>(page.getContent(), page.getTotalElements(), page.getTotalPages(), page.getSize(), page.getNumber());
     }
 
     @GetMapping("/industry-paid-bookings")
     @PreAuthorize(PortalPermissionExpressions.DASHBOARD)
-    public ApiResponse<List<PortalIndustryPaidBookingCountResponse>> getPaidBookingCountsByIndustry() {
-        return new ApiResponse<>(portalDashboardService.getPaidBookingCountsByIndustry());
+    public ApiResponse<List<PortalIndustryPaidBookingCountResponse>> getPaidBookingCountsByIndustry(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return new ApiResponse<>(portalDashboardService.getPaidBookingCountsByIndustry(startDate, endDate));
     }
 }
