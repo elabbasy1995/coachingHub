@@ -26,9 +26,12 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneOffset;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -42,8 +45,8 @@ public class PortalDashboardService {
     public PortalDashboardResponse getDashboard(LocalDate startDate, LocalDate endDate) {
         OffsetDateTime startDateTime = startDateTime(startDate);
         OffsetDateTime endDateTime = endDateTime(endDate);
-        LocalDateTime createdStartDateTime = startDate.atStartOfDay();
-        LocalDateTime createdEndDateTime = endDate.plusDays(1).atStartOfDay();
+        LocalDateTime createdStartDateTime = createdStartDateTime(startDate);
+        LocalDateTime createdEndDateTime = createdEndDateTime(endDate);
 
         return new PortalDashboardResponse(
                 buildCoachStats(createdStartDateTime, createdEndDateTime),
@@ -75,7 +78,7 @@ public class PortalDashboardService {
         OffsetDateTime endDateTime = endDateTime(endDate);
         OffsetDateTime now = OffsetDateTime.now();
 
-        Long totalCount = bookingRepository.countByStartTimeGreaterThanEqualAndStartTimeLessThan(startDateTime, endDateTime);
+        Long totalCount = bookingRepository.count(dateRangeSpec(startDateTime, endDateTime));
         Long completedCount = bookingRepository.count(completedBookingSpec(startDateTime, endDateTime, now));
 
         return new PortalBookingReportResponse(
@@ -88,33 +91,25 @@ public class PortalDashboardService {
     }
 
     public PortalRevenueBetweenDatesResponse getRevenueBetweenDates(LocalDate startDate, LocalDate endDate) {
-        OffsetDateTime startDateTime = startDateTime(startDate);
-        OffsetDateTime endDateTime = endDateTime(endDate);
-        Double totalRevenue = defaultDouble(
-                bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeBetween(
-                        PaymentStatus.PAID,
-                        startDateTime,
-                        endDateTime
-                )
-        );
+        LocalDate effectiveStartDate = startDate;
+        LocalDate effectiveEndDate = endDate;
 
-        List<PortalRevenueBetweenDatesResponse.DailyRevenue> dailyRevenue = new ArrayList<>();
-        LocalDate currentDate = startDate;
-        while (!currentDate.isAfter(endDate)) {
-            OffsetDateTime dayStart = currentDate.atStartOfDay().atOffset(ZoneOffset.UTC);
-            OffsetDateTime dayEnd = currentDate.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
-            dailyRevenue.add(new PortalRevenueBetweenDatesResponse.DailyRevenue(
-                    currentDate,
-                    defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeBetween(
-                            PaymentStatus.PAID,
-                            dayStart,
-                            dayEnd
-                    ))
-            ));
-            currentDate = currentDate.plusDays(1);
+        if (startDate == null && endDate == null) {
+            LocalDate currentMonthEndDate = YearMonth.from(LocalDate.now(ZoneOffset.UTC)).atEndOfMonth();
+            Booking firstPaidBooking = bookingRepository.findFirstByPaymentStatusOrderByStartTimeAsc(PaymentStatus.PAID);
+            effectiveStartDate = firstPaidBooking == null
+                    ? currentMonthEndDate.withDayOfMonth(1)
+                    : firstPaidBooking.getStartTime().toLocalDate().withDayOfMonth(1);
+            effectiveEndDate = currentMonthEndDate;
         }
 
-        return new PortalRevenueBetweenDatesResponse(startDate, endDate, totalRevenue, dailyRevenue);
+        OffsetDateTime startDateTime = startDateTime(effectiveStartDate);
+        OffsetDateTime endDateTime = endDateTime(effectiveEndDate);
+        Double totalRevenue = sumPaidRevenue(startDateTime, endDateTime);
+
+        List<PortalRevenueBetweenDatesResponse.MonthlyRevenue> monthlyRevenue = buildMonthlyRevenue(effectiveStartDate, effectiveEndDate);
+
+        return new PortalRevenueBetweenDatesResponse(effectiveStartDate, effectiveEndDate, totalRevenue, monthlyRevenue);
     }
 
     public Page<PortalDashboardTaskResponse> getTasksBetweenDates(LocalDate startDate,
@@ -122,7 +117,9 @@ public class PortalDashboardService {
                                                                   Integer pageIndex,
                                                                   Integer pageSize) {
         return taskAssignmentRepository.findDashboardTasksBetweenDueDates(
+                startDate != null,
                 startDate,
+                endDate != null,
                 endDate,
                 TaskAssignmentStatus.COMPLETED,
                 PageRequest.of(pageIndex == null ? 0 : pageIndex, pageSize == null ? 20 : pageSize)
@@ -133,37 +130,50 @@ public class PortalDashboardService {
                                                                       LocalDate endDate,
                                                                       Integer pageIndex,
                                                                       Integer pageSize) {
+        OffsetDateTime startDateTime = startDateTime(startDate);
+        OffsetDateTime endDateTime = endDateTime(endDate);
+
         return coachRepository.findCoachBookingDashboard(
                 PaymentStatus.PAID,
                 PaymentStatus.PENDING,
                 PaymentStatus.CANCELLED,
                 OffsetDateTime.now(),
-                startDateTime(startDate),
-                endDateTime(endDate),
+                startDateTime != null,
+                endDateTime != null,
+                startDateTime,
+                endDateTime,
                 PageRequest.of(pageIndex == null ? 0 : pageIndex, pageSize == null ? 20 : pageSize)
         );
     }
 
     public List<PortalIndustryPaidBookingCountResponse> getPaidBookingCountsByIndustry(LocalDate startDate, LocalDate endDate) {
-        return bookingRepository.countPaidBookingsByCoachingIndustry(
-                PaymentStatus.PAID,
-                startDateTime(startDate),
-                endDateTime(endDate)
-        );
+        OffsetDateTime startDateTime = startDateTime(startDate);
+        OffsetDateTime endDateTime = endDateTime(endDate);
+
+        if (startDateTime != null && endDateTime != null) {
+            return bookingRepository.countPaidBookingsByCoachingIndustryBetween(PaymentStatus.PAID, startDateTime, endDateTime);
+        }
+        if (startDateTime != null) {
+            return bookingRepository.countPaidBookingsByCoachingIndustryFrom(PaymentStatus.PAID, startDateTime);
+        }
+        if (endDateTime != null) {
+            return bookingRepository.countPaidBookingsByCoachingIndustryBefore(PaymentStatus.PAID, endDateTime);
+        }
+        return bookingRepository.countPaidBookingsByCoachingIndustry(PaymentStatus.PAID);
     }
 
     private PortalDashboardResponse.CoachStats buildCoachStats(LocalDateTime startDateTime, LocalDateTime endDateTime) {
         return new PortalDashboardResponse.CoachStats(
-                coachRepository.countByCreatedDateGreaterThanEqualAndCreatedDateLessThan(startDateTime, endDateTime),
-                coachRepository.countByStatusAndCreatedDateGreaterThanEqualAndCreatedDateLessThan(CoachStatus.APPROVED, startDateTime, endDateTime),
-                coachRepository.countByStatusAndCreatedDateGreaterThanEqualAndCreatedDateLessThan(CoachStatus.PENDING_APPROVAL, startDateTime, endDateTime),
-                coachRepository.countByStatusAndCreatedDateGreaterThanEqualAndCreatedDateLessThan(CoachStatus.REJECTED, startDateTime, endDateTime)
+                coachRepository.countByCreatedDateOptionalRange(startDateTime, endDateTime),
+                coachRepository.countByStatusAndCreatedDateOptionalRange(CoachStatus.APPROVED, startDateTime, endDateTime),
+                coachRepository.countByStatusAndCreatedDateOptionalRange(CoachStatus.PENDING_APPROVAL, startDateTime, endDateTime),
+                coachRepository.countByStatusAndCreatedDateOptionalRange(CoachStatus.REJECTED, startDateTime, endDateTime)
         );
     }
 
     private PortalDashboardResponse.CoacheeStats buildCoacheeStats(LocalDateTime startDateTime, LocalDateTime endDateTime) {
-        long total = coacheeRepository.countByCreatedDateGreaterThanEqualAndCreatedDateLessThan(startDateTime, endDateTime);
-        long active = coacheeRepository.countByActiveTrueAndCreatedDateGreaterThanEqualAndCreatedDateLessThan(startDateTime, endDateTime);
+        long total = coacheeRepository.countByCreatedDateOptionalRange(startDateTime, endDateTime);
+        long active = coacheeRepository.countByActiveTrueAndCreatedDateOptionalRange(startDateTime, endDateTime);
 
         return new PortalDashboardResponse.CoacheeStats(
                 total,
@@ -175,23 +185,47 @@ public class PortalDashboardService {
     private PortalDashboardResponse.BookingStats buildBookingStats(OffsetDateTime startDateTime,
                                                                    OffsetDateTime endDateTime) {
         return new PortalDashboardResponse.BookingStats(
-                bookingRepository.countByStartTimeGreaterThanEqualAndStartTimeLessThan(startDateTime, endDateTime),
-                bookingRepository.countByPaymentStatusAndStartTimeGreaterThanEqualAndStartTimeLessThan(PaymentStatus.PAID, startDateTime, endDateTime),
-                bookingRepository.countByPaymentStatusAndStartTimeGreaterThanEqualAndStartTimeLessThan(PaymentStatus.PENDING, startDateTime, endDateTime),
-                bookingRepository.countByPaymentStatusAndStartTimeGreaterThanEqualAndStartTimeLessThan(PaymentStatus.CANCELLED, startDateTime, endDateTime),
-                bookingRepository.countByPaymentStatusAndStartTimeGreaterThanEqualAndStartTimeLessThan(PaymentStatus.REFUNDED, startDateTime, endDateTime),
-                bookingRepository.countByStartTimeGreaterThanEqualAndStartTimeLessThan(startDateTime, endDateTime),
-                bookingRepository.countByStartTimeGreaterThanEqualAndStartTimeLessThan(startDateTime, endDateTime)
+                bookingRepository.count(dateRangeSpec(startDateTime, endDateTime)),
+                bookingRepository.count(paymentStatusDateRangeSpec(PaymentStatus.PAID, startDateTime, endDateTime)),
+                bookingRepository.count(paymentStatusDateRangeSpec(PaymentStatus.PENDING, startDateTime, endDateTime)),
+                bookingRepository.count(paymentStatusDateRangeSpec(PaymentStatus.CANCELLED, startDateTime, endDateTime)),
+                bookingRepository.count(paymentStatusDateRangeSpec(PaymentStatus.REFUNDED, startDateTime, endDateTime)),
+                bookingRepository.count(dateRangeSpec(startDateTime, endDateTime)),
+                bookingRepository.count(dateRangeSpec(startDateTime, endDateTime))
         );
     }
 
     private PortalDashboardResponse.RevenueStats buildRevenueStats(OffsetDateTime startDateTime,
                                                                    OffsetDateTime endDateTime) {
+        Double paidRevenue = sumPaidRevenue(startDateTime, endDateTime);
         return new PortalDashboardResponse.RevenueStats(
-                defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeBetween(PaymentStatus.PAID, startDateTime, endDateTime)),
-                defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeBetween(PaymentStatus.PAID, startDateTime, endDateTime)),
-                defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeBetween(PaymentStatus.PAID, startDateTime, endDateTime))
+                paidRevenue,
+                paidRevenue,
+                paidRevenue
         );
+    }
+
+    private Double sumPaidRevenue(OffsetDateTime startDateTime, OffsetDateTime endDateTime) {
+        if (startDateTime != null && endDateTime != null) {
+            return defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeBetween(
+                    PaymentStatus.PAID,
+                    startDateTime,
+                    endDateTime
+            ));
+        }
+        if (startDateTime != null) {
+            return defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeGreaterThanEqual(
+                    PaymentStatus.PAID,
+                    startDateTime
+            ));
+        }
+        if (endDateTime != null) {
+            return defaultDouble(bookingRepository.sumFinalPriceByPaymentStatusAndStartTimeLessThan(
+                    PaymentStatus.PAID,
+                    endDateTime
+            ));
+        }
+        return defaultDouble(bookingRepository.sumFinalPriceByPaymentStatus(PaymentStatus.PAID));
     }
 
     private Double defaultDouble(Double value) {
@@ -212,18 +246,19 @@ public class PortalDashboardService {
     }
 
     private Specification<Booking> dateRangeSpec(OffsetDateTime startDateTime, OffsetDateTime endDateTime) {
-        return (root, query, criteriaBuilder) -> criteriaBuilder.and(
-                criteriaBuilder.greaterThanOrEqualTo(root.get("startTime"), startDateTime),
-                criteriaBuilder.lessThan(root.get("startTime"), endDateTime)
-        );
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            addStartTimePredicates(predicates, root.get("startTime"), criteriaBuilder, startDateTime, endDateTime);
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     private OffsetDateTime startDateTime(LocalDate startDate) {
-        return startDate.atStartOfDay().atOffset(ZoneOffset.UTC);
+        return startDate == null ? null : startDate.atStartOfDay().atOffset(ZoneOffset.UTC);
     }
 
     private OffsetDateTime endDateTime(LocalDate endDate) {
-        return endDate.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        return endDate == null ? null : endDate.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
     }
 
     private Specification<Booking> statusSpec(BookingStatus status,
@@ -231,10 +266,8 @@ public class PortalDashboardService {
                                               OffsetDateTime endDateTime,
                                               OffsetDateTime now) {
         return (root, query, criteriaBuilder) -> {
-            Predicate dateRange = criteriaBuilder.and(
-                    criteriaBuilder.greaterThanOrEqualTo(root.get("startTime"), startDateTime),
-                    criteriaBuilder.lessThan(root.get("startTime"), endDateTime)
-            );
+            List<Predicate> predicates = new ArrayList<>();
+            addStartTimePredicates(predicates, root.get("startTime"), criteriaBuilder, startDateTime, endDateTime);
 
             Predicate confirmed = criteriaBuilder.and(
                     criteriaBuilder.notEqual(root.get("paymentStatus"), PaymentStatus.CANCELLED),
@@ -255,19 +288,77 @@ public class PortalDashboardService {
                 case RUNNING, PAST -> criteriaBuilder.disjunction();
             };
 
-            return criteriaBuilder.and(dateRange, statusPredicate);
+            predicates.add(statusPredicate);
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }
 
     private Specification<Booking> completedBookingSpec(OffsetDateTime startDateTime,
                                                         OffsetDateTime endDateTime,
                                                         OffsetDateTime now) {
-        return (root, query, criteriaBuilder) -> criteriaBuilder.and(
-                criteriaBuilder.greaterThanOrEqualTo(root.get("startTime"), startDateTime),
-                criteriaBuilder.lessThan(root.get("startTime"), endDateTime),
-                criteriaBuilder.notEqual(root.get("paymentStatus"), PaymentStatus.CANCELLED),
-                criteriaBuilder.notEqual(root.get("paymentStatus"), PaymentStatus.PENDING),
-                criteriaBuilder.lessThanOrEqualTo(root.get("startTime"), now)
-        );
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            addStartTimePredicates(predicates, root.get("startTime"), criteriaBuilder, startDateTime, endDateTime);
+            predicates.add(criteriaBuilder.notEqual(root.get("paymentStatus"), PaymentStatus.CANCELLED));
+            predicates.add(criteriaBuilder.notEqual(root.get("paymentStatus"), PaymentStatus.PENDING));
+            predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("startTime"), now));
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    private LocalDateTime createdStartDateTime(LocalDate startDate) {
+        return startDate == null ? null : startDate.atStartOfDay();
+    }
+
+    private LocalDateTime createdEndDateTime(LocalDate endDate) {
+        return endDate == null ? null : endDate.plusDays(1).atStartOfDay();
+    }
+
+    private Specification<Booking> paymentStatusDateRangeSpec(PaymentStatus paymentStatus,
+                                                              OffsetDateTime startDateTime,
+                                                              OffsetDateTime endDateTime) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(criteriaBuilder.equal(root.get("paymentStatus"), paymentStatus));
+            addStartTimePredicates(predicates, root.get("startTime"), criteriaBuilder, startDateTime, endDateTime);
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    private List<PortalRevenueBetweenDatesResponse.MonthlyRevenue> buildMonthlyRevenue(LocalDate startDate, LocalDate endDate) {
+        List<PortalRevenueBetweenDatesResponse.MonthlyRevenue> monthlyRevenue = new ArrayList<>();
+        if (startDate == null || endDate == null) {
+            return monthlyRevenue;
+        }
+
+        LocalDate currentMonth = startDate.withDayOfMonth(1);
+        while (!currentMonth.isAfter(endDate)) {
+            LocalDate monthStart = currentMonth.isBefore(startDate) ? startDate : currentMonth;
+            LocalDate nextMonth = currentMonth.plusMonths(1);
+            LocalDate monthEndExclusive = nextMonth.isAfter(endDate.plusDays(1)) ? endDate.plusDays(1) : nextMonth;
+            OffsetDateTime monthStartDateTime = monthStart.atStartOfDay().atOffset(ZoneOffset.UTC);
+            OffsetDateTime monthEndDateTime = monthEndExclusive.atStartOfDay().atOffset(ZoneOffset.UTC);
+            monthlyRevenue.add(new PortalRevenueBetweenDatesResponse.MonthlyRevenue(
+                    currentMonth,
+                    currentMonth.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH),
+                    currentMonth.getMonth().getDisplayName(TextStyle.FULL, Locale.forLanguageTag("ar")),
+                    sumPaidRevenue(monthStartDateTime, monthEndDateTime)
+            ));
+            currentMonth = nextMonth;
+        }
+        return monthlyRevenue;
+    }
+
+    private void addStartTimePredicates(List<Predicate> predicates,
+                                        jakarta.persistence.criteria.Path<OffsetDateTime> startTime,
+                                        jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder,
+                                        OffsetDateTime startDateTime,
+                                        OffsetDateTime endDateTime) {
+        if (startDateTime != null) {
+            predicates.add(criteriaBuilder.greaterThanOrEqualTo(startTime, startDateTime));
+        }
+        if (endDateTime != null) {
+            predicates.add(criteriaBuilder.lessThan(startTime, endDateTime));
+        }
     }
 }

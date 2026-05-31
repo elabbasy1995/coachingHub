@@ -8,6 +8,7 @@ import com.elabbasy.coatchinghub.model.request.RescheduleBookingRequest;
 import com.elabbasy.coatchinghub.model.response.ApiResponse;
 import com.elabbasy.coatchinghub.model.response.PortalBookingListResponse;
 import com.elabbasy.coatchinghub.service.BookingService;
+import com.elabbasy.coatchinghub.service.StripePaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -30,6 +31,7 @@ import java.util.List;
 public class PortalBookingController {
 
     private final BookingService bookingService;
+    private final StripePaymentService stripePaymentService;
 
     @GetMapping("/admin-list")
     @PreAuthorize(PortalPermissionExpressions.BOOKING)
@@ -70,6 +72,6 @@ public class PortalBookingController {
     @PutMapping("/{bookingId}/refund")
     @PreAuthorize(PortalPermissionExpressions.BOOKING)
     public ApiResponse<BookingDto> refundBooking(@PathVariable Long bookingId) {
-        return new ApiResponse<>(bookingService.refundBookingByAdmin(bookingId));
+        return new ApiResponse<>(stripePaymentService.refundBookingByAdmin(bookingId));
     }
 }

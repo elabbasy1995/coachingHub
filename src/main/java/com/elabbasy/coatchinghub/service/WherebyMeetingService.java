@@ -46,7 +46,7 @@ public class WherebyMeetingService {
                     .header(HttpHeaders.AUTHORIZATION, buildAuthorizationHeader())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(new CreateWherebyMeetingRequest(
-                            endDate,
+                            endDate.plusHours(1),
                             buildRoomNamePrefix(bookingId),
                             List.of("hostRoomUrl")
                     ))

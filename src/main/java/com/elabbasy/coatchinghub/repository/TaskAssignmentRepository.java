@@ -59,18 +59,20 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
     JOIN ta.taskTemplate tt
     JOIN tt.coach coach
     JOIN ta.coachee coachee
-    WHERE ta.dueDate >= :startDate
-      AND ta.dueDate <= :endDate
+    WHERE (:hasStartDate = false OR ta.dueDate >= :startDate)
+      AND (:hasEndDate = false OR ta.dueDate <= :endDate)
     ORDER BY ta.dueDate ASC, ta.createdDate DESC
 """,
             countQuery = """
     SELECT COUNT(ta)
     FROM TaskAssignment ta
-    WHERE ta.dueDate >= :startDate
-      AND ta.dueDate <= :endDate
+    WHERE (:hasStartDate = false OR ta.dueDate >= :startDate)
+      AND (:hasEndDate = false OR ta.dueDate <= :endDate)
 """)
     Page<PortalDashboardTaskResponse> findDashboardTasksBetweenDueDates(
+            @Param("hasStartDate") boolean hasStartDate,
             @Param("startDate") LocalDate startDate,
+            @Param("hasEndDate") boolean hasEndDate,
             @Param("endDate") LocalDate endDate,
             @Param("completedStatus") TaskAssignmentStatus completedStatus,
             Pageable pageable

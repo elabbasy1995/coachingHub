@@ -40,6 +40,7 @@ public class SecurityConfig {
                                 "/mobile/api/lookup/**",
                                 "/api/mobile/version/check",
                                 "/api/public/otp/**",
+                                "/api/stripe/webhook",
                                 "/auth/forgot-password/**",
                                 "/mobile/api/coaches/details/**"
                         ).permitAll()

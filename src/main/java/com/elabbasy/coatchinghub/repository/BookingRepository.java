@@ -38,6 +38,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
 
     Long countByPaymentStatus(PaymentStatus paymentStatus);
 
+    Booking findFirstByPaymentStatusOrderByStartTimeAsc(PaymentStatus paymentStatus);
+
     Long countByPaymentStatusAndStartTimeGreaterThanEqualAndStartTimeLessThan(
             PaymentStatus paymentStatus,
             OffsetDateTime startTime,
@@ -80,6 +82,17 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
     );
 
     @Query("""
+        SELECT COALESCE(SUM(b.finalPrice), 0)
+        FROM Booking b
+        WHERE b.paymentStatus = :paymentStatus
+          AND b.startTime < :endTime
+    """)
+    Double sumFinalPriceByPaymentStatusAndStartTimeLessThan(
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("endTime") OffsetDateTime endTime
+    );
+
+    @Query("""
         SELECT new com.elabbasy.coatchinghub.model.response.PortalIndustryPaidBookingCountResponse(
             industry.id,
             industry.nameEn,
@@ -95,10 +108,68 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
         GROUP BY industry.id, industry.nameEn, industry.nameAr
         ORDER BY COUNT(b) DESC, industry.nameEn ASC
     """)
-    java.util.List<PortalIndustryPaidBookingCountResponse> countPaidBookingsByCoachingIndustry(
+    java.util.List<PortalIndustryPaidBookingCountResponse> countPaidBookingsByCoachingIndustryBetween(
             @Param("paymentStatus") PaymentStatus paymentStatus,
             @Param("startTime") OffsetDateTime startTime,
             @Param("endTime") OffsetDateTime endTime
+    );
+
+    @Query("""
+        SELECT new com.elabbasy.coatchinghub.model.response.PortalIndustryPaidBookingCountResponse(
+            industry.id,
+            industry.nameEn,
+            industry.nameAr,
+            COUNT(b)
+        )
+        FROM Booking b
+        JOIN b.coach coach
+        JOIN coach.coachingIndustries industry
+        WHERE b.paymentStatus = :paymentStatus
+          AND b.startTime >= :startTime
+        GROUP BY industry.id, industry.nameEn, industry.nameAr
+        ORDER BY COUNT(b) DESC, industry.nameEn ASC
+    """)
+    java.util.List<PortalIndustryPaidBookingCountResponse> countPaidBookingsByCoachingIndustryFrom(
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("startTime") OffsetDateTime startTime
+    );
+
+    @Query("""
+        SELECT new com.elabbasy.coatchinghub.model.response.PortalIndustryPaidBookingCountResponse(
+            industry.id,
+            industry.nameEn,
+            industry.nameAr,
+            COUNT(b)
+        )
+        FROM Booking b
+        JOIN b.coach coach
+        JOIN coach.coachingIndustries industry
+        WHERE b.paymentStatus = :paymentStatus
+          AND b.startTime < :endTime
+        GROUP BY industry.id, industry.nameEn, industry.nameAr
+        ORDER BY COUNT(b) DESC, industry.nameEn ASC
+    """)
+    java.util.List<PortalIndustryPaidBookingCountResponse> countPaidBookingsByCoachingIndustryBefore(
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("endTime") OffsetDateTime endTime
+    );
+
+    @Query("""
+        SELECT new com.elabbasy.coatchinghub.model.response.PortalIndustryPaidBookingCountResponse(
+            industry.id,
+            industry.nameEn,
+            industry.nameAr,
+            COUNT(b)
+        )
+        FROM Booking b
+        JOIN b.coach coach
+        JOIN coach.coachingIndustries industry
+        WHERE b.paymentStatus = :paymentStatus
+        GROUP BY industry.id, industry.nameEn, industry.nameAr
+        ORDER BY COUNT(b) DESC, industry.nameEn ASC
+    """)
+    java.util.List<PortalIndustryPaidBookingCountResponse> countPaidBookingsByCoachingIndustry(
+            @Param("paymentStatus") PaymentStatus paymentStatus
     );
 
     Page<CoacheeCoachBookingProjection> findByCoachIdAndCoacheeIdAndPaymentStatus(Long coachId, Long coacheeId, PaymentStatus paymentStatus, Pageable pageable);

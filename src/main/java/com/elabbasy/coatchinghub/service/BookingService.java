@@ -46,6 +46,7 @@ public class BookingService {
     private final NotificationService notificationService;
     private final CoachingIndustryRepository coachingIndustryRepository;
     private final WherebyMeetingService wherebyMeetingService;
+    private final PaymentRepository paymentRepository;
 
     public BookingDto createBooking(CreateBookingRequest request, Long coacheeId) {
 
@@ -168,29 +169,19 @@ public class BookingService {
             throw new BusinessException(ErrorMessage.UNAUTHORIZE_TO_PERFORM_ACTION);
         }
 
-        booking.setPaymentDateTime(OffsetDateTime.now());
-        booking.setPaymentStatus(PaymentStatus.PAID);
-        booking.setPaymentTransaction(bookingRequest.getTransactionId());
-        createMeetingIfNeeded(booking);
+        if (!StringUtils.hasText(bookingRequest.getTransactionId())) {
+            throw new BusinessException(ErrorMessage.INVALID_PAYMENT_STATUS);
+        }
 
-        Booking save = bookingRepository.save(booking);
+        Payment payment = paymentRepository
+                .findByProviderAndProviderPaymentIntentId(PaymentProvider.STRIPE, bookingRequest.getTransactionId())
+                .orElseThrow(() -> new BusinessException(ErrorMessage.INVALID_PAYMENT_STATUS));
 
-        CoachSlot coachSlot = coachSlotRepository.findById(booking.getCoachSlot().getId()).orElseThrow(() -> new BusinessException(ErrorMessage.SLOT_NOT_FOUND));
+        if (!booking.getId().equals(payment.getBooking().getId()) || !PaymentStatus.PAID.equals(payment.getStatus())) {
+            throw new BusinessException(ErrorMessage.INVALID_PAYMENT_STATUS);
+        }
 
-        coachSlot.setStatus(SlotStatus.BOOKED);
-        coachSlotRepository.save(coachSlot);
-
-        notificationService.notifyBoth(booking.getCoach().getId(),
-                booking.getCoachee().getId(),
-                "New Booking",
-                "حجز جديد",
-                "You have a new booking scheduled",
-                "لديك حجز جديد مجدول",
-                NotificationType.BOOKING_CREATED,
-                booking.getId()
-                );
-
-        return bookingMapper.toDto(save);
+        return bookingMapper.toDto(booking);
     }
 
     public BookingDto rescheduleBooking(RescheduleBookingRequest request, Long coacheeId) {

@@ -17,14 +17,16 @@ public class PortalRevenueBetweenDatesResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private Double totalRevenue;
-    private List<DailyRevenue> dailyRevenue;
+    private List<MonthlyRevenue> monthlyRevenue;
 
     @Getter
     @Setter
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class DailyRevenue {
-        private LocalDate date;
+    public static class MonthlyRevenue {
+        private LocalDate month;
+        private String monthNameEn;
+        private String monthNameAr;
         private Double revenue;
     }
 }

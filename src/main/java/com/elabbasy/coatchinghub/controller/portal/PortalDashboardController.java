@@ -30,42 +30,42 @@ public class PortalDashboardController {
     private final PortalDashboardService portalDashboardService;
 
     @GetMapping
-    @PreAuthorize(PortalPermissionExpressions.DASHBOARD)
+    @PreAuthorize(PortalPermissionExpressions.REPORTS)
     public ApiResponse<PortalDashboardResponse> getDashboard(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return new ApiResponse<>(portalDashboardService.getDashboard(startDate, endDate));
     }
 
     @GetMapping("/booking-status-counts")
-    @PreAuthorize(PortalPermissionExpressions.DASHBOARD)
+    @PreAuthorize(PortalPermissionExpressions.REPORTS)
     public ApiResponse<PortalBookingStatusCountsResponse> getBookingStatusCounts(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return new ApiResponse<>(portalDashboardService.getBookingStatusCounts(startDate, endDate));
     }
 
     @GetMapping("/booking-report")
-    @PreAuthorize(PortalPermissionExpressions.DASHBOARD)
+    @PreAuthorize(PortalPermissionExpressions.REPORTS)
     public ApiResponse<PortalBookingReportResponse> getBookingReport(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return new ApiResponse<>(portalDashboardService.getBookingReport(startDate, endDate));
     }
 
     @GetMapping("/revenue")
-    @PreAuthorize(PortalPermissionExpressions.DASHBOARD)
+    @PreAuthorize(PortalPermissionExpressions.REPORTS)
     public ApiResponse<PortalRevenueBetweenDatesResponse> getRevenueBetweenDates(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return new ApiResponse<>(portalDashboardService.getRevenueBetweenDates(startDate, endDate));
     }
 
     @GetMapping("/tasks")
-    @PreAuthorize(PortalPermissionExpressions.DASHBOARD)
+    @PreAuthorize(PortalPermissionExpressions.REPORTS)
     public ApiResponse<List<PortalDashboardTaskResponse>> getTasksBetweenDates(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false, defaultValue = "0") Integer pageIndex,
             @RequestParam(required = false, defaultValue = "20") Integer pageSize) {
         Page<PortalDashboardTaskResponse> page = portalDashboardService.getTasksBetweenDates(startDate, endDate, pageIndex, pageSize);
@@ -73,10 +73,10 @@ public class PortalDashboardController {
     }
 
     @GetMapping("/coach-bookings")
-    @PreAuthorize(PortalPermissionExpressions.DASHBOARD)
+    @PreAuthorize(PortalPermissionExpressions.REPORTS)
     public ApiResponse<List<PortalCoachBookingDashboardResponse>> getCoachBookings(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false, defaultValue = "0") Integer pageIndex,
             @RequestParam(required = false, defaultValue = "20") Integer pageSize) {
         Page<PortalCoachBookingDashboardResponse> page = portalDashboardService.getCoachBookings(startDate, endDate, pageIndex, pageSize);
@@ -84,10 +84,10 @@ public class PortalDashboardController {
     }
 
     @GetMapping("/industry-paid-bookings")
-    @PreAuthorize(PortalPermissionExpressions.DASHBOARD)
+    @PreAuthorize(PortalPermissionExpressions.REPORTS)
     public ApiResponse<List<PortalIndustryPaidBookingCountResponse>> getPaidBookingCountsByIndustry(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return new ApiResponse<>(portalDashboardService.getPaidBookingCountsByIndustry(startDate, endDate));
     }
 }

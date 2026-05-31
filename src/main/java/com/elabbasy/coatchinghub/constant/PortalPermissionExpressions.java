@@ -7,7 +7,7 @@ public final class PortalPermissionExpressions {
     public static final String BOOKING = "hasAuthority('BOOKING')";
     public static final String COUPONS = "hasAuthority('COUPONS')";
     public static final String COACHES_OR_BOOKING = "hasAnyAuthority('COACHES', 'BOOKING')";
-    public static final String DASHBOARD = "hasAnyAuthority('ADMINS', 'COACHES', 'BOOKING', 'COUPONS')";
+    public static final String REPORTS = "hasAuthority('REPORTS')";
 
     private PortalPermissionExpressions() {
     }
